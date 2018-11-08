@@ -161,26 +161,22 @@ class EFM(EFMBase):
 
     def _raw_construct(self, zsphats):
         zs, phats = zsphats
-        print(phats)
         M, dim = phats.shape
 
         # if no lowering is needed
         if self.nlow == 0:
             self.data = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
-            print('raw no lowering')
 
         # lowering phats first is better
         elif M*dim < dim**self.v:
             low_phats = phats * (flat_metric(dim)[np.newaxis])
             einsum_args = [phats]*self.nup + [low_phats]*self.nlow
             self.data = einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
-            print('raw lowering phats first')
 
         # lowering EFM is better    
         else:
             self.data = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
             self.data = self._raise_lower(self.data)
-            print('raw lowering efm')
 
         return self.data
 
@@ -206,7 +202,7 @@ class EFMSet(EFMBase):
 
     """A class for holding a collection of `EFM`s and constructing them as a set."""
 
-    def __init__(self, efm_specs, **kwargs):
+    def __init__(self, efm_specs=None, vmax=None, **kwargs):
         """
         **Arguments**
 
@@ -224,6 +220,10 @@ class EFMSet(EFMBase):
 
         # initialize base class
         super(EFMSet, self).__init__(kwargs)
+
+        if vmax is not None and efm_specs is None:
+            vmin = 1 if self.normed else 0
+            efm_specs = [(v,0) for v in range(vmin, vmax+1)]
 
         # get unique EFMs 
         self.unique_efms = frozenset(efm_specs)
