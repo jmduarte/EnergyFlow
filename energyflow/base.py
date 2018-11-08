@@ -75,16 +75,23 @@ class EFBase(with_metaclass(ABCMeta, object)):
         """
 
         if n_jobs == -1:
-            try: 
-                self.n_jobs = multiprocessing.cpu_count()
+            try:
+                n_jobs = multiprocessing.cpu_count()
             except:
-                self.n_jobs = 4 # choose reasonable value
+                n_jobs = 4 # choose reasonable value
+
+        self.n_jobs = n_jobs
+
+        # don't bother setting up a Pool
+        if self.n_jobs == 1:
+            return np.asarray(list(map(self._batch_compute_func, events)))
 
         # setup processor pool
         chunksize = min(max(len(events)//self.n_jobs, 1), 10000)
         if sys.version_info[0] == 3:
             with multiprocessing.Pool(self.n_jobs) as pool:
                 results = np.asarray(list(pool.imap(self._batch_compute_func, events, chunksize)))
+                
         # Pool is not a context manager in python 2
         else:
             pool = multiprocessing.Pool(self.n_jobs)

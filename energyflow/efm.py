@@ -146,18 +146,13 @@ class EFM(EFMBase):
     # PRIVATE METHODS
     #================
 
-    def _raise_lower(self, tensor):
+    def _rl_construct(self, tensor):
 
         # fine to use pure c_einsum here as it's used anyway
         return c_einsum(self.rl_einstr, tensor, *[flat_metric(len(tensor))]*self.rl_diff)
 
-    def _rl_construct(self, other_data):       
-        self.data = self._raise_lower(other_data)
-        return self.data
-
-    def _subslice_construct(self, other_data):
-        self.data = other_data[self.subslice]
-        return self.data
+    def _subslice_construct(self, tensor):
+        return tensor[self.subslice]
 
     def _raw_construct(self, zsphats):
         zs, phats = zsphats
@@ -165,20 +160,18 @@ class EFM(EFMBase):
 
         # if no lowering is needed
         if self.nlow == 0:
-            self.data = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            return einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
 
         # lowering phats first is better
         elif M*dim < dim**self.v:
             low_phats = phats * (flat_metric(dim)[np.newaxis])
             einsum_args = [phats]*self.nup + [low_phats]*self.nlow
-            self.data = einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
+            return einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
 
         # lowering EFM is better    
         else:
-            self.data = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
-            self.data = self._raise_lower(self.data)
-
-        return self.data
+            tensor = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            return self._rl_construct(tensor)
 
 
     #===============
@@ -324,6 +317,7 @@ class EFMSet(EFMBase):
                 self.args[sig] = sigprev
                 self.rules[sig] = 'lowering from {}'.format(sigprev)
 
+            # update prevous values
             vprev, sigprev = v, sig
 
 
@@ -339,7 +333,7 @@ class EFMSet(EFMBase):
         efm_dict = {}
         for sig in self.sorted_efms:
             arg = self.args[sig]
-            data_arg = zsphats if arg == 'r' else self.efms[arg].data
+            data_arg = zsphats if arg == 'r' else efm_dict[arg]
             efm_dict[sig] = self.efms[sig].construct(data_arg)
 
         return efm_dict

@@ -2,7 +2,11 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-from keras.optimizers import Adam
+try:
+    from keras.optimizers import Adam
+except ImportError:
+    pass
+
 from six import with_metaclass
 
 __all__ = [
