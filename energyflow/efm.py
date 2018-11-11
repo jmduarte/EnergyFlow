@@ -7,7 +7,6 @@ from operator import itemgetter
 import numpy as np
 from numpy.core.multiarray import c_einsum
 
-from energyflow.algorithms import einsum
 from energyflow.base import EFMBase
 from energyflow.measure import measure_kwargs
 from energyflow.utils import flat_metric, timing
@@ -160,17 +159,17 @@ class EFM(EFMBase):
 
         # if no lowering is needed
         if self.nlow == 0:
-            return einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            return np.einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
 
         # lowering phats first is better
         elif M*dim < dim**self.v:
             low_phats = phats * (flat_metric(dim)[np.newaxis])
             einsum_args = [phats]*self.nup + [low_phats]*self.nlow
-            return einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
+            return np.einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
 
         # lowering EFM is better    
         else:
-            tensor = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            tensor = np.einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
             return self._rl_construct(tensor)
 
 
@@ -178,9 +177,14 @@ class EFM(EFMBase):
     # PUBLIC METHODS
     #===============
 
-    def compute(self, event=None, zs=None, phats=None):
+    def compute(self, event=None, zs=None, phats=None, full=True):
 
-        return self._raw_construct(super(EFM, self).compute(event, zs, phats))
+        zsphats = super(EFM, self).compute(event, zs, phats)
+
+        if full:
+            return self._raw_construct(zsphats)
+
+        # TODO: implement symmetric computation, can include lowering by multiplying by the right sign, though this changes the symmetry
 
     def set_timer(self):
         self.times = []

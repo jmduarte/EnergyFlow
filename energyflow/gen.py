@@ -406,9 +406,9 @@ class PrimeGenerator(object):
                 einstr, efm_spec = efp2efms(EFP(edgs, weights=ws).graph)
                 self.efm_einstrs.append(einstr)
                 self.efm_specs.append(efm_spec)
-                self.efm_einpaths.append(einsum_path(einstr, 
-                                                     *[np.empty([4]*sum(s)) for s in efm_spec],
-                                                     optimize=self.ve.np_optimize)[0])
+                self.efm_einpaths.append(np.einsum_path(einstr, 
+                                                        *[np.empty([4]*sum(s)) for s in efm_spec],
+                                                        optimize=self.ve.np_optimize)[0])
 
 
 ###############################################################################

@@ -19,7 +19,7 @@ import warnings
 
 import numpy as np
 
-from energyflow.algorithms import VariableElimination, einsum, einsum_path
+from energyflow.algorithms import VariableElimination
 from energyflow.base import EFPBase
 from energyflow.efm import EFMSet, efp2efms
 # importing Generator from end of file
@@ -88,7 +88,7 @@ class EFP(EFPBase):
                 self._efm_einstr, self._efm_spec = efp2efms(self.graph)
                 self._efmset = EFMSet(self._efm_spec, subslicing=self.subslicing, no_measure=True)
                 args = [np.empty([4]*sum(s)) for s in self._efm_spec]
-                self._efm_einpath = einsum_path(self._efm_einstr, *args, optimize=np_optimize)[0]
+                self._efm_einpath = np.einsum_path(self._efm_einstr, *args, optimize=np_optimize)[0]
             
             # setup ve for standard efp compute
             else:
@@ -141,11 +141,11 @@ class EFP(EFPBase):
 
     def _efp_compute(self, zs, thetas_dict):
         einsum_args = [thetas_dict[w] for w in self._weights] + self._n*[zs]
-        return einsum(self._einstr, *einsum_args, optimize=self._einpath)
+        return np.einsum(self._einstr, *einsum_args, optimize=self._einpath)
 
     def _efm_compute(self, efms_dict):
         einsum_args = [efms_dict[sig] for sig in self._efm_spec]
-        return self._pow2d * einsum(self._efm_einstr, *einsum_args, optimize=self._efm_einpath)
+        return self._pow2d * np.einsum(self._efm_einstr, *einsum_args, optimize=self._efm_einpath)
 
 
     #===============
