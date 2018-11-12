@@ -4,6 +4,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 
 try:
     from keras.optimizers import Adam
+    from keras.callbacks import EarlyStopping, ModelCheckpoint
 except ImportError:
     pass
 
@@ -160,6 +161,18 @@ class NNBase(ArchBase):
         # metrics
         self.metrics = self.hps.get('metrics', ['accuracy'])
 
+        # callbacks
+        self.model_path = self.hps.get('model_path', '')
+        self.save_while_training = self.hps.get('save_while_training', True)
+        self.save_weights_only = self.hps.get('save_weights_only', False)
+        self.modelcheck_opts = {'save_best_only': True, 'verbose': 1, 
+                                'save_weights_only': self.save_weights_only}
+        self.modelcheck_opts.update(self.hps.get('modelcheck_opts', {}))
+
+        self.patience = self.hps.get('patience', None)
+        self.earlystop_opts = {'restore_best_weights': True, 'verbose': 1, 'patience': self.patience}
+        self.earlystop_opts.update(self.hps.get('earlystop_opts', {}))
+
         # flags
         self.compile = self.hps.get('compile', True)
         self.summary = self.hps.get('summary', True)
@@ -168,14 +181,38 @@ class NNBase(ArchBase):
 
         # compile model if specified
         if self.compile: 
-            self.model.compile(loss=self.loss, optimizer=self.opt(lr=self.lr), metrics=self.metrics)
+            self.model.compile(loss=self.loss, 
+                               optimizer=self.opt(lr=self.lr), 
+                               metrics=self.metrics)
 
             # print summary
             if self.summary: 
                 self.model.summary()
 
     def fit(self, *args, **kwargs):
-        return self.model.fit(*args, **kwargs)
+
+        callbacks = []
+
+        # do model checkpointing, used mainly to save model during training instead of at end
+        if self.model_path and self.save_while_training:
+            callbacks.append(ModelCheckpoint(self.model_path, **self.modelcheck_opts))
+
+        # do early stopping, which no also handle loading best weights at the end
+        if self.earlystop_opts['patience'] is not None:
+            callbacks.append(EarlyStopping(**self.earlystop_opts))
+
+        # update any callbacks that were passed with the two we build in explicitly
+        kwargs.setdefault('callbacks', []).extend(callbacks)
+
+        hist = self.model.fit(*args, **kwargs)
+
+        if self.model_path and not self.save_while_training:
+            if self.modelcheck_opts['save_weights_only']:
+                self.model.save(self.model_path)
+            else:
+                self.model.save_weights(self.model_path)
+
+        return hist
 
     def predict(self, *args, **kwargs):
         return self.model.predict(*args, **kwargs)
