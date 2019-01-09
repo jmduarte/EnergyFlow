@@ -17,7 +17,7 @@ class LinearClassifier(ArchBase):
     implementations of these classifiers."""
 
     # LinearClassifier(*args, **kwargs)
-    def process_hps(self):
+    def _process_hps(self):
         """See [`ArchBase`](#archbase) for how to pass in hyperparameters.
 
         **Default Hyperparameters**
@@ -41,17 +41,21 @@ class LinearClassifier(ArchBase):
             convergence parameter.
         """
 
+        super(LinearClassifier, self)._process_hps()
+
         # which type of linear model we're using
-        self.linclass_type = self.hps.get('linclass_type', 'lda')
+        self.linclass_type = self._proc_arg('linclass_type', default='lda')
 
         # LDA hyperparameters
-        self.solver = self.hps.get('solver', 'svd')
-        self.tol = self.hps.get('tol', 10**-10)
+        self.solver = self._proc_arg('solver', default='svd')
+        self.tol = self._proc_arg('tol', default=10**-10)
 
         # logistic regression hyperparameter dictionary
-        self.LR_hps = self.hps.get('LR_hps', {})
+        self.LR_hps = self._proc_arg('LR_hps', default={})
 
-    def construct_model(self):
+        self._verify_empty_hps()
+
+    def _construct_model(self):
 
         # setup linear model according to linclass_type
         if self.linclass_type == 'lda':

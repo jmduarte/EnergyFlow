@@ -18,6 +18,7 @@ __all__ = [
     'get_examples', 
     'data_split', 
     'to_categorical',
+    'load_model',
     'remap_pids'
 ]
 
@@ -169,7 +170,7 @@ def to_categorical(labels, num_classes=None):
 
     # get num_classes from max label if None
     if num_classes is None:
-        num_classes = np.max(labels) + 1
+        num_classes = np.int(np.max(labels)) + 1
 
     y = np.asarray(labels, dtype=int)
     n = y.shape[0]
@@ -179,6 +180,15 @@ def to_categorical(labels, num_classes=None):
     categorical[np.arange(n), y] = 1
 
     return categorical
+
+
+keras_models = False
+def load_model(fpath):
+    global keras_models
+    if not keras_models:
+        import keras.models
+        keras_models = keras.models
+    return keras_models.load_model(fpath)
 
 
 # PDGid to small float dictionary

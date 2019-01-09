@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod, abstractproperty
+import warnings
 
 try:
     from keras.optimizers import Adam
@@ -50,18 +51,35 @@ class ArchBase(with_metaclass(ABCMeta, object)):
         self.hps.update(kwargs)
 
         # process hyperparameters
-        self.process_hps()
+        self._process_hps()
 
         # construct model
-        self.construct_model()
+        self._construct_model()
 
     @abstractmethod
-    def process_hps(self):
+    def _process_hps(self):
         pass
 
     @abstractmethod
-    def construct_model(self):
+    def _construct_model(self):
         pass
+
+    def _proc_arg(self, name, **kwargs):
+        if 'old' in kwargs and kwargs['old'] in self.hps:
+            old = kwargs['old']
+            m = '{} is deprecated and will be removed in the future, use {} instead.'.format(old, name)
+            warnings.warn(FutureWarning(m))
+            kwargs['default'] = self.hps.pop(old)
+
+        return self.hps.pop(name, kwargs['default']) if 'default' in kwargs else self.hps.pop(name)
+
+    def _verify_empty_hps(self):
+
+        # hps should be all empty now
+        for k in self.hps:
+            raise ValueError('unrecognized keyword argument {}'.format(k))
+
+        del self.hps
 
     # fit(X_train, Y_train, **kwargs)
     @abstractmethod
@@ -122,7 +140,7 @@ class ArchBase(with_metaclass(ABCMeta, object)):
 ###############################################################################
 class NNBase(ArchBase):        
 
-    def process_hps(self):
+    def _process_hps(self):
         """**Default NN Hyperparameters**
 
         Common hyperparameters that apply to all architectures except 
@@ -150,34 +168,36 @@ class NNBase(ArchBase):
         """
 
         # optimization
-        self.loss = self.hps.get('loss', 'categorical_crossentropy')
-        self.lr = self.hps.get('lr', 0.001)
-        self.opt = self.hps.get('opt', Adam)
+        self.loss = self._proc_arg('loss', default='categorical_crossentropy')
+        self.lr = self._proc_arg('lr', default=0.001)
+        self.opt = self._proc_arg('opt', default=Adam)
 
         # output
-        self.output_dim = self.hps.get('output_dim', 2)
-        self.output_act = self.hps.get('output_act', 'softmax')
+        self.output_dim = self._proc_arg('output_dim', default=2)
+        self.output_act = self._proc_arg('output_act', default='softmax')
 
         # metrics
-        self.metrics = self.hps.get('metrics', ['accuracy'])
+        self.metrics = self._proc_arg('metrics', default=['accuracy'])
 
         # callbacks
-        self.model_path = self.hps.get('model_path', '')
-        self.save_while_training = self.hps.get('save_while_training', True)
-        self.save_weights_only = self.hps.get('save_weights_only', False)
+        self.model_path = self._proc_arg('model_path', default='')
+        self.save_while_training = self._proc_arg('save_while_training', default=True)
+        self.save_weights_only = self._proc_arg('save_weights_only', default=False)
         self.modelcheck_opts = {'save_best_only': True, 'verbose': 1, 
                                 'save_weights_only': self.save_weights_only}
-        self.modelcheck_opts.update(self.hps.get('modelcheck_opts', {}))
+        self.modelcheck_opts.update(self._proc_arg('modelcheck_opts', default={}))
+        self.save_weights_only = self.modelcheck_opts['save_weights_only']
 
-        self.patience = self.hps.get('patience', None)
+        self.patience = self._proc_arg('patience', default=None)
         self.earlystop_opts = {'restore_best_weights': True, 'verbose': 1, 'patience': self.patience}
-        self.earlystop_opts.update(self.hps.get('earlystop_opts', {}))
+        self.earlystop_opts.update(self._proc_arg('earlystop_opts', default={}))
+        self.patience = self.earlystop_opts['patience']
 
         # flags
-        self.compile = self.hps.get('compile', True)
-        self.summary = self.hps.get('summary', True)
+        self.compile = self._proc_arg('compile', default=True)
+        self.summary = self._proc_arg('summary', default=True)
 
-    def compile_model(self):
+    def _compile_model(self):
 
         # compile model if specified
         if self.compile: 
@@ -186,7 +206,7 @@ class NNBase(ArchBase):
                                metrics=self.metrics)
 
             # print summary
-            if self.summary: 
+            if self.summary:
                 self.model.summary()
 
     def fit(self, *args, **kwargs):
@@ -198,7 +218,7 @@ class NNBase(ArchBase):
             callbacks.append(ModelCheckpoint(self.model_path, **self.modelcheck_opts))
 
         # do early stopping, which no also handle loading best weights at the end
-        if self.earlystop_opts['patience'] is not None:
+        if self.patience is not None:
             callbacks.append(EarlyStopping(**self.earlystop_opts))
 
         # update any callbacks that were passed with the two we build in explicitly
@@ -207,10 +227,10 @@ class NNBase(ArchBase):
         hist = self.model.fit(*args, **kwargs)
 
         if self.model_path and not self.save_while_training:
-            if self.modelcheck_opts['save_weights_only']:
-                self.model.save(self.model_path)
-            else:
+            if self.save_weights_only:
                 self.model.save_weights(self.model_path)
+            else:
+                self.model.save(self.model_path)
 
         return hist
 
