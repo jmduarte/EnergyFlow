@@ -7,6 +7,7 @@ from operator import itemgetter
 import numpy as np
 from numpy.core.multiarray import c_einsum
 
+from energyflow.algorithms import einsum
 from energyflow.base import EFMBase
 from energyflow.measure import measure_kwargs
 from energyflow.utils import flat_metric, timing
@@ -159,17 +160,17 @@ class EFM(EFMBase):
 
         # if no lowering is needed
         if self.nlow == 0:
-            return np.einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            return einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
 
         # lowering phats first is better
         elif M*dim < dim**self.v:
             low_phats = phats * (flat_metric(dim)[np.newaxis])
             einsum_args = [phats]*self.nup + [low_phats]*self.nlow
-            return np.einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
+            return einsum(self.raw_einstr, zs, *einsum_args, optimize=self.raw_einpath)
 
         # lowering EFM is better    
         else:
-            tensor = np.einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
+            tensor = einsum(self.raw_einstr, zs, *[phats]*self.v, optimize=self.raw_einpath)
             return self._rl_construct(tensor)
 
 
