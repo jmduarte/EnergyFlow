@@ -19,6 +19,7 @@ __all__ = [
     'ms_from_p4s',
     'phi_fix',
     'flat_metric',
+    'm_of_ptyphims'
 ]
 
 def ptyphims_from_p4s(p4s, phi_ref=None, keep_allzeros=True):
@@ -241,3 +242,7 @@ def flat_metric(dim):
     if dim <= 101:
         return long_metric[:dim]
     return np.asarray([1.] + [-1.]*(dim-1))
+
+
+def m_of_ptyphims(ptyphims):
+    return ms_from_p4s(np.atleast_2d(p4s_from_ptyphims(ptyphims)).sum(axis=0))

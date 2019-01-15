@@ -180,7 +180,7 @@ class NNBase(ArchBase):
         self.metrics = self._proc_arg('metrics', default=['accuracy'])
 
         # callbacks
-        self.model_path = self._proc_arg('model_path', default='')
+        self.model_fpath = self._proc_arg('model_fpath', default='')
         self.save_while_training = self._proc_arg('save_while_training', default=True)
         self.save_weights_only = self._proc_arg('save_weights_only', default=False)
         self.modelcheck_opts = {'save_best_only': True, 'verbose': 1, 
@@ -214,8 +214,8 @@ class NNBase(ArchBase):
         callbacks = []
 
         # do model checkpointing, used mainly to save model during training instead of at end
-        if self.model_path and self.save_while_training:
-            callbacks.append(ModelCheckpoint(self.model_path, **self.modelcheck_opts))
+        if self.model_fpath and self.save_while_training:
+            callbacks.append(ModelCheckpoint(self.model_fpath, **self.modelcheck_opts))
 
         # do early stopping, which no also handle loading best weights at the end
         if self.patience is not None:
@@ -226,11 +226,11 @@ class NNBase(ArchBase):
 
         hist = self.model.fit(*args, **kwargs)
 
-        if self.model_path and not self.save_while_training:
+        if self.model_fpath and not self.save_while_training:
             if self.save_weights_only:
-                self.model.save_weights(self.model_path)
+                self.model.save_weights(self.model_fpath)
             else:
-                self.model.save(self.model_path)
+                self.model.save(self.model_fpath)
 
         return hist
 
