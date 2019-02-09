@@ -110,7 +110,9 @@ class ArchBase(with_metaclass(ABCMeta, object)):
     # predict(X_test, **kwargs)
     @abstractmethod
     def predict(self):
-        """Evaluate the model on a dataset. 
+        """Evaluate the model on a dataset. For the linear model, the underlying
+        `predict_proba` method is used. For all other models, the underlying
+        `predict` method is used.
 
         **Arguments**
 
