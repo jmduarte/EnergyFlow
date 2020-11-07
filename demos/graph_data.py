@@ -66,7 +66,9 @@ class GraphDataset(Dataset):
             emdval = ef.emd.emd(Js[i], Js[j], R=R)/ONE_HUNDRED_GEV
             jetpair = np.concatenate([Js[i], Js[j]], axis=0)
             Ei = np.sum(Js[i][:,0])
+            Js[i][:,0] = Js[i][:,0]/Ei
             Ej = np.sum(Js[j][:,0])
+            Js[j][:,0] = Js[j][:,0]/Ej
             nparticles_i = len(Js[i])
             nparticles_j = len(Js[j])
             pairs = [[m, n] for (m, n) in itertools.product(range(0,nparticles_i),range(nparticles_i,nparticles_i+nparticles_j))]
