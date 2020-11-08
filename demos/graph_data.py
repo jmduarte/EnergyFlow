@@ -6,11 +6,13 @@ import tables
 import numpy as np
 import pandas as pd
 import energyflow as ef
+import glob
 
 ONE_HUNDRED_GEV = 100.0
 
 class GraphDataset(Dataset):
-    def __init__(self, root, transform=None, pre_transform=None):
+    def __init__(self, root, transform=None, pre_transform=None, njets=1000):        
+        self.njets = njets
         super(GraphDataset, self).__init__(root, transform, pre_transform) 
 
 
@@ -20,8 +22,12 @@ class GraphDataset(Dataset):
 
     @property
     def processed_file_names(self):
-        njetpairs = 10000
-        return ['data_{}.pt'.format(i) for i in range(njetpairs)]
+        """
+        Returns a list of all the files in the processed files directory
+        """
+        proc_list = glob.glob(osp.join(self.processed_dir, 'data_*.pt'))
+        return_list = list(map(osp.basename, proc_list))
+        return return_list
 
     def __len__(self):
         return len(self.processed_file_names)
@@ -33,16 +39,15 @@ class GraphDataset(Dataset):
 
     def process(self):
         Js = []
-        num = 100
         R = 0.4
         for raw_path in self.raw_paths:
             # load quark and gluon jets
-            X, y = ef.qg_jets.load(200, pad=False, cache_dir=self.root+'/raw')
+            X, y = ef.qg_jets.load(self.njets, pad=False, cache_dir=self.root+'/raw')
             # the jet radius for these jets
             # process jets
             Js = []
             for i,x in enumerate(X): 
-                if i >= num: break
+                if i >= self.njets: break
                 # ignore padded particles and removed particle id information
                 x = x[x[:,0] > 0,:3]
                 # center jet according to pt-centroid
@@ -52,8 +57,11 @@ class GraphDataset(Dataset):
                 x = x[np.linalg.norm(x[:,1:3], axis=1) <= R]
                 # add to list
                 Js.append(x)
-        jetpairs = [[i, j] for (i, j) in itertools.product(range(num),range(num))]
-        for k, (i, j) in enumerate(jetpairs):
+        jetpairs = [[i, j] for (i, j) in itertools.product(range(self.njets),range(self.njets))]
+        datas = []
+        for k, (i, j) in enumerate(jetpairs):            
+            if k%100 == 0:
+                datas = []
             emdval = ef.emd.emd(Js[i], Js[j], R=R)/ONE_HUNDRED_GEV
             Ei = np.sum(Js[i][:,0])
             Ej = np.sum(Js[j][:,0])
@@ -75,8 +83,10 @@ class GraphDataset(Dataset):
                 continue
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
-
-            torch.save(data, osp.join(self.processed_dir, 'data_{}.pt'.format(k)))
+            datas.append([data])           
+            if k%100 == 99:
+                datas = sum(datas,[])
+                torch.save(datas, osp.join(self.processed_dir, 'data_{}.pt'.format(k)))
             
     def get(self, idx):
         data = torch.load(osp.join(self.processed_dir, 'data_{}.pt'.format(idx)))
