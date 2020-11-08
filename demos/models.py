@@ -39,7 +39,7 @@ class EdgeNet(nn.Module):
     
     
 class DynamicEdgeNet(nn.Module):
-    def __init__(self, input_dim=3, big_dim=32, bigger_dim=128, global_dim=2, output_dim=1, k=16, aggr='mean'):
+    def __init__(self, input_dim=3, big_dim=128, bigger_dim=256, global_dim=2, output_dim=1, k=16, aggr='mean'):
         super(DynamicEdgeNet, self).__init__()
         convnn = nn.Sequential(nn.Linear(2*(input_dim), big_dim),
                                nn.ReLU(),
