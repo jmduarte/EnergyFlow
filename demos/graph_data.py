@@ -62,9 +62,7 @@ class GraphDataset(Dataset):
                 Js.append(x)
         jetpairs = [[i, j] for (i, j) in itertools.product(range(self.n_jets),range(self.n_jets))]
         datas = []
-        for k, (i, j) in enumerate(jetpairs):            
-            if k%self.n_events_merge == 0:
-                datas = []
+        for k, (i, j) in enumerate(jetpairs):    
             emdval = ef.emd.emd(Js[i], Js[j], R=R)/ONE_HUNDRED_GEV
             Ei = np.sum(Js[i][:,0])
             Ej = np.sum(Js[j][:,0])
@@ -86,10 +84,11 @@ class GraphDataset(Dataset):
                 continue
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
-            datas.append([data])           
+            datas.append([data])                  
             if k%self.n_events_merge == self.n_events_merge-1:
                 datas = sum(datas,[])
                 torch.save(datas, osp.join(self.processed_dir, 'data_{}.pt'.format(k)))
+                datas=[]
             
     def get(self, idx):
         data = torch.load(osp.join(self.processed_dir, self.processed_file_names[idx]))

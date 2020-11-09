@@ -118,6 +118,7 @@ if __name__ == "__main__":
                         help="Model name", required=False, default='DeeperDynamicEdgeNet')
     parser.add_argument("--n-jets", type=int, help="number of jets", required=False, default=100)
     parser.add_argument("--n-events-merge", type=int, help="number of events to merge", required=False, default=100)
+    parser.add_argument("--batch-size", type=int, help="batch size", required=False, default=1)
     parser.add_argument("--n-epochs", type=int, help="number of epochs", required=False, default=100)
     parser.add_argument("--patience", type=int, help="patience for early stopping", required=False, default=10)
     args = parser.parse_args()
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     fulllen = len(gdata)
     tv_frac = 0.10
     tv_num = math.ceil(fulllen*tv_frac)
-    batch_size = 1
+    batch_size = args.batch_size
     lr = 0.001
     device = 'cuda:0'
     model_fname = args.model
@@ -148,11 +149,11 @@ if __name__ == "__main__":
 
     train_dataset, valid_dataset, test_dataset = random_split(gdata, [fulllen-2*tv_num,tv_num,tv_num])
 
-    train_loader = DataListLoader(train_dataset, batch_size=batch_size, pin_memory=True, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, pin_memory=True, shuffle=True)
     train_loader.collate_fn = collate
-    valid_loader = DataListLoader(valid_dataset, batch_size=batch_size, pin_memory=True, shuffle=False)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, pin_memory=True, shuffle=False)
     valid_loader.collate_fn = collate
-    test_loader = DataListLoader(test_dataset, batch_size=batch_size, pin_memory=True, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, pin_memory=True, shuffle=False)
     test_loader.collate_fn = collate
 
     train_samples = len(train_dataset)
