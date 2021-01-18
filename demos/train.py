@@ -146,6 +146,14 @@ if __name__ == "__main__":
     model = model_class(input_dim=input_dim, big_dim=big_dim, bigger_dim=bigger_dim, 
                         global_dim=global_dim, output_dim=output_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr = lr)
+    try:
+        if torch.cuda.is_available():
+            print("Using GPU")
+            model.load_state_dict(torch.load(modpath, map_location=torch.device('cuda')))
+        else:
+            model.load_state_dict(torch.load(modpath, map_location=torch.device('cpu')))
+    except:
+        pass # new model
 
     train_dataset, valid_dataset, test_dataset = random_split(gdata, [fulllen-2*tv_num,tv_num,tv_num])
 
@@ -163,7 +171,7 @@ if __name__ == "__main__":
     n_epochs = args.n_epochs
     patience = args.patience
     stale_epochs = 0
-    best_valid_loss = 99999
+    best_valid_loss = test(model, valid_loader, valid_samples, batch_size)
     losses = []
     val_losses = []
     for epoch in range(0, n_epochs):
